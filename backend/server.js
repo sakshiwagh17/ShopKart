@@ -13,6 +13,12 @@ dotenv.config();
 app.use(express.json()); //it pares the request body in json
 app.use(cookieParser())
 const PORT = process.env.PORT || 5000;
+const cors = require("cors");
+
+app.use(cors({
+  origin: "http://localhost:5173", // your frontend
+  credentials: true               // ⬅️ ALLOW COOKIES TO BE SENT
+}));
 
 app.get("/", (req, res) => {
   res.send("API is working!!");
