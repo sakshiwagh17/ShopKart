@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { useUserStore } from "../stores/userStore";
 import { PlusCircle, Upload } from "lucide-react";
+import { useProductStore } from "../stores/useProductStore";
+
 const CreateProductTab = () => {
-  const { loading } = useUserStore();
+  const { createProduct } = useProductStore();
   const categories = [
     "jeans",
     "bags",
@@ -13,6 +14,7 @@ const CreateProductTab = () => {
     "suits",
     "tshirts",
   ];
+
   const [newProduct, setNewProduct] = useState({
     name: "",
     description: "",
@@ -20,101 +22,142 @@ const CreateProductTab = () => {
     category: "",
     image: "",
   });
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log(newProduct);
+    try {
+      await createProduct(newProduct);
+      setNewProduct({
+        name: "",
+        description: "",
+        price: "",
+        category: "",
+        image: "",
+      });
+    } catch (error) {
+      console.log("Error in creating products!");
+    }
   };
-  const handleImageChange = async () => {};
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewProduct({ ...newProduct, image: reader.result });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
     <motion.div
-      className="shadow-lg rounded-lg p-8 mb-8 items-center max-w-xl mx-auto"
+      className="shadow-xl rounded-2xl p-8 bg-white max-w-2xl mx-auto"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8 }}
     >
-      <h1 className="text-center text-indigo-500 text-2xl font-bold">
-        Create New product
+      <h1 className="text-center text-3xl font-bold text-indigo-600 mb-6">
+        Create New Product
       </h1>
-      <form onClick={handleSubmit} action="">
+
+      <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label htmlFor="">Product Name</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Product Name
+          </label>
           <input
             value={newProduct.name}
             required
             type="text"
+            placeholder="Enter product name"
             onChange={(e) =>
               setNewProduct({ ...newProduct, name: e.target.value })
             }
-            className="mt-1 block w-full  border border-gray-600 rounded-xl shadow-sm py-2 px-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 mb-2"
+            className="w-full border border-gray-300 rounded-xl px-3 py-2 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none transition"
           />
         </div>
+
         <div>
-          <label htmlFor="">Description</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Description
+          </label>
           <textarea
+            placeholder="Write a short description..."
             onChange={(e) =>
               setNewProduct({ ...newProduct, description: e.target.value })
             }
             value={newProduct.description}
-            on
             rows="3"
-            className="mt-1 block w-full  border border-gray-600 rounded-xl shadow-sm py-2 px-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 mb-2"
+            className="w-full border border-gray-300 rounded-xl px-3 py-2 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none transition"
           ></textarea>
         </div>
+
         <div>
-          <label htmlFor="">Price</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Price (₹)
+          </label>
           <input
             type="number"
+            placeholder="Enter price"
             onChange={(e) =>
               setNewProduct({ ...newProduct, price: e.target.value })
             }
             value={newProduct.price}
-            className="mt-1 block w-full  border border-gray-600 rounded-xl shadow-sm py-2 px-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 mb-2"
+            className="w-full border border-gray-300 rounded-xl px-3 py-2 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none transition"
           />
         </div>
+
         <div>
-          <label htmlFor="">Category</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Category
+          </label>
           <select
-            name=""
-            id=""
-            className="mt-1 block w-full  border border-gray-600 rounded-xl shadow-sm py-2 px-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 mb-2"
+            value={newProduct.category}
+            onChange={(e) =>
+              setNewProduct({ ...newProduct, category: e.target.value })
+            }
+            className="w-full border border-gray-300 rounded-xl px-3 py-2 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none transition"
           >
-            <option>Select a category</option>
+            <option value="">Select a category</option>
             {categories.map((category) => (
               <option key={category} value={category}>
-                {category}
+                {category.charAt(0).toUpperCase() + category.slice(1)}
               </option>
             ))}
           </select>
         </div>
-        <div className="mt-1 flex items-center">
-          <input
-            type="file"
-            id="image"
-            className="sr-only"
-            accept="image/*"
-            onChange={handleImageChange}
-          />
-          <label
-            htmlFor="image"
-            className="mt-1 block w-full  border border-gray-600 rounded-xl shadow-sm py-2 px-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 mb-2"
-          >
-            <Upload className="h-5 w-5 inline-block mr-2" />
-            Upload Image
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Product Image
           </label>
-          {newProduct.image && (
-            <span className="ml-3 text-sm text-gray-400">Image uploaded </span>
-          )}
+          <div className="relative border-2 border-dashed border-gray-300 rounded-xl p-4 text-center cursor-pointer hover:bg-gray-50 transition">
+            <input
+              type="file"
+              id="image"
+              className="absolute inset-0 opacity-0 cursor-pointer"
+              accept="image/*"
+              onChange={handleImageChange}
+            />
+            <div className="flex items-center justify-center space-x-2 text-indigo-600">
+              <Upload className="h-5 w-5" />
+              <span className="font-medium">
+                {newProduct.image ? "Change Image" : "Upload Image"}
+              </span>
+            </div>
+            {newProduct.image && (
+              <p className="mt-2 text-sm text-gray-500">Image uploaded successfully</p>
+            )}
+          </div>
         </div>
 
         <button
           type="submit"
-          className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md 
-					shadow-sm text-base font-medium text-white bg-indigo-600 hover:bg-indigo-700 
-					focus:outline-none focus:ring-2 focus:ring-offset-2 gap-2 focus:ring-indigo-500 disabled:opacity-50"
-          disabled={loading}
+          className="w-full flex items-center justify-center space-x-2 py-2 px-4 rounded-xl bg-indigo-600 text-white font-semibold shadow-md hover:bg-indigo-700 transition"
         >
-          <PlusCircle />
-          Create Product
+          <PlusCircle className="h-5 w-5" />
+          <span>Create Product</span>
         </button>
       </form>
     </motion.div>

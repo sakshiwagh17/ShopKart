@@ -2,98 +2,104 @@ const { cloudinary } = require("../lib/cloudinary.js");
 const redis = require("../lib/redis.js");
 const Product = require("../models/product.js");
 
+// Get all products
 const getAllProduct = async (req, res) => {
   try {
     const products = await Product.find({});
     res.json({ products });
   } catch (error) {
-    console.log("Error in product controller!", error.message);
-    res.json({ message: "Error in getallproduct", error });
+    console.error("Error in getAllProduct:", error.message);
+    res.status(500).json({ message: "Error fetching all products", error });
   }
 };
 
+// Get featured products with Redis cache
 const getfeaturedProducts = async (req, res) => {
   try {
-    let featuredProduct = await redis.get("featured_products");
-    if (featuredProduct) {
-      return res.json(JSON.parse(featuredProduct));
-    }
-    //If not in redis then find in mongodb
+    let featuredProducts = await redis.get("featured_products");
 
-    //lean() => it will return the plan javascript object rather then the mongodb document
-    //It will good for performance
-    featuredProduct = await Product.find({ isfeatured: true }).lean();
-    if (!featuredProduct) {
-      return res.status(404).json({ message: "No products found" });
+    if (featuredProducts) {
+      return res.json(JSON.parse(featuredProducts));
     }
 
-    //Store in redis for future quik access
-    await redis.set("featured_products", JSON.stringify(featuredProduct));
-    res.json(featuredProduct);
+    featuredProducts = await Product.find({ isfeatured: true }).lean();
+
+    if (!featuredProducts.length) {
+      return res.status(404).json({ message: "No featured products found" });
+    }
+
+    await redis.set("featured_products", JSON.stringify(featuredProducts));
+    res.json(featuredProducts);
   } catch (error) {
-    console.log("Error in feature products controller", error.message);
-    res.json({ message: "Error in Server", error });
-  }
-};
-
-const createProducts = async (req, res) => {
-  try {
-    const { name, description, price, image, category } = req.body;
-    const cloudinaryResponse = null;
-    if (image) {
-      cloudinaryResponse = await cloudinary.upload(image, {
-        folder: "products",
-      });
-    }
-    const product = await Product.create({
-      name,
-      description,
-      price,
-      image: cloudinaryResponse?.secure_url
-        ? cloudinaryResponse.secure_url
-        : "",
-      category,
-    });
-    res.status(201).json(product);
-  } catch (error) {
-    console.log("Error in create product controller", error.message);
+    console.error("Error in getfeaturedProducts:", error.message);
     res.status(500).json({ message: "Server Error", error });
   }
 };
 
+// Create a product with Cloudinary upload
+const createProducts = async (req, res) => {
+  try {
+    const { name, description, price, image, category } = req.body;
+
+    let cloudinaryResponse = null;
+
+    if (image) {
+      cloudinaryResponse = await cloudinary.uploader.upload(image, {
+        folder: "products",
+      });
+    }
+
+    const product = await Product.create({
+      name,
+      description,
+      price,
+      image: cloudinaryResponse?.secure_url || "",
+      category,
+    });
+
+    // Invalidate Redis cache
+    await redis.del("featured_products");
+
+    res.status(201).json(product);
+  } catch (error) {
+    console.error("Error in createProducts:", error.message);
+    res.status(500).json({ message: "Server Error", error });
+  }
+};
+
+// Delete product and its Cloudinary image
 const deleteProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
     if (!product) {
-      res.status(404).json({ message: "Product not found" });
+      return res.status(404).json({ message: "Product not found" });
     }
+
     if (product.image) {
       const publicId = product.image.split("/").pop().split(".")[0];
       try {
         await cloudinary.uploader.destroy(`products/${publicId}`);
-        console.log("Producted deleted successfully from cloudinary!");
-      } catch (error) {
-        res.json({
-          message: "Error in deleteting the product from cloudinary",
-          error,
-        });
+        console.log("Product image deleted from Cloudinary.");
+      } catch (cloudError) {
+        console.warn("Cloudinary delete error:", cloudError.message);
       }
     }
 
     await Product.findByIdAndDelete(req.params.id);
-    res.json({ message: "product is deleted successfully" });
+    await redis.del("featured_products");
+
+    res.json({ message: "Product deleted successfully" });
   } catch (error) {
-    console.log("Error in deleting the product", error.message);
-    res.status(500).json({ message: "Server Error!", error });
+    console.error("Error in deleteProduct:", error.message);
+    res.status(500).json({ message: "Server Error", error });
   }
 };
 
+// Get random 3 recommended products
 const getrecommendedProducts = async (req, res) => {
   try {
-    const product = await Product.aggregate([
-      {
-        $sample: { size: 3 },
-      },
+    const products = await Product.aggregate([
+      { $sample: { size: 3 } },
       {
         $project: {
           _id: 1,
@@ -104,48 +110,55 @@ const getrecommendedProducts = async (req, res) => {
         },
       },
     ]);
-    res.json({ product });
+    res.json({ products });
   } catch (error) {
-    console.log("Error in recommended products", error.message);
-    res.json({ message: "Server error", error });
+    console.error("Error in getrecommendedProducts:", error.message);
+    res.status(500).json({ message: "Server error", error });
   }
 };
 
+// Get products by category
 const getProductByCategory = async (req, res) => {
-  const category = req.params.category;
   try {
-    const product = await Product.find({ category });
-    res.json({ product });
+    const products = await Product.find({ category: req.params.category });
+    res.json({ products });
   } catch (error) {
-    console.log("Error in getProductByCategory", error.message);
-    res.json("Server error", error);
+    console.error("Error in getProductByCategory:", error.message);
+    res.status(500).json({ message: "Server error", error });
   }
 };
 
+// Toggle feature status of a product
 const toggleFeature = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
-    if (product) {
-      product.isfeatured = !product.isfeatured;
-      const updateProduct = await product.save();
-      await updateProductcache();
-      res.json({ updateProduct });
-    } else {
-      res.json({ message: "Product is not found!" });
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found!" });
     }
+
+    product.isfeatured = !product.isfeatured;
+    const updatedProduct = await product.save();
+
+    await updateProductCache();
+
+    res.json({ updatedProduct });
   } catch (error) {
-    console.log("Error in the toggle festure", error.message);
-    res.json({ message: "Server Error!" });
+    console.error("Error in toggleFeature:", error.message);
+    res.status(500).json({ message: "Server error", error });
   }
 };
-async function updateProductcache() {
+
+// Helper to update featured product cache
+const updateProductCache = async () => {
   try {
     const featured = await Product.find({ isfeatured: true }).lean();
-    await redis.set("featured_product", JSON.stringify(featured));
+    await redis.set("featured_products", JSON.stringify(featured));
   } catch (error) {
-    console.log("Error in the toggle festure", error);
+    console.error("Error updating Redis featured_products cache:", error.message);
   }
-}
+};
+
 module.exports = {
   getAllProduct,
   getfeaturedProducts,

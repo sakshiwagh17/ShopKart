@@ -10,7 +10,7 @@ const connectDB = require("./lib/db.js");
 
 const app = express();
 dotenv.config();
-app.use(express.json()); //it pares the request body in json
+app.use(express.json({ limit: "10mb" })); //it pares the request body in json
 app.use(cookieParser())
 const PORT = process.env.PORT || 5000;
 const cors = require("cors");
