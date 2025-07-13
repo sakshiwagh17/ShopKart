@@ -9,13 +9,19 @@ import { useUserStore } from "./stores/userStore";
 import AdminPage from "./pages/AdminPage";
 import LoadingSpinner from "./components/LodingSpinner";
 import CategoryPage from "./pages/CategoryPage";
+import CartPage from "./pages/CartPage";
+import { useCartStore } from "./stores/useCartStore";
 
 const App = () => {
-  const { user, checkAuth,checkingAuth } = useUserStore();
-console.log("Current user:", user);
+  const { user, checkAuth, checkingAuth } = useUserStore();
+  const { getCartItem } = useCartStore();
+  console.log("Current user:", user);
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
+  useEffect(() => {
+    getCartItem();
+  }, [getCartItem]);
   if (checkingAuth) return <LoadingSpinner />;
 
   return (
@@ -23,15 +29,26 @@ console.log("Current user:", user);
       <Navbar />
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/signup" element={!user ? <SignUpPage /> : <Navigate to="/" />} />
-        <Route path="/login" element={!user ? <LoginPage /> : <Navigate to="/" />} />
         <Route
-						path='/secret-dashboard'
-						element={user?.role === "admin" ? <AdminPage /> : <Navigate to='/login' />}
-					/>
-          <Route path='/category/:category' element={<CategoryPage />} />
+          path="/signup"
+          element={!user ? <SignUpPage /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/login"
+          element={!user ? <LoginPage /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/cart"
+          element={user ? <CartPage /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/secret-dashboard"
+          element={
+            user?.role === "admin" ? <AdminPage /> : <Navigate to="/login" />
+          }
+        />
+        <Route path="/category/:category" element={<CategoryPage />} />
       </Routes>
-      
 
       <Toaster />
     </div>

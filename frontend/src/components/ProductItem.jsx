@@ -2,21 +2,22 @@ import { ShoppingCart } from "lucide-react";
 import React from "react";
 import toast from "react-hot-toast";
 import { useUserStore } from "../stores/userStore";
+import { useCartStore } from "../stores/useCartStore";
 
 const ProductItem = ({ product }) => {
-    const {user}=useUserStore();
+  const { user } = useUserStore();
+  const { addProduct } = useCartStore();
   const handleAddToCart = () => {
-    if(!user){
-        toast.error('Please login to add product to cart')
-    }else{
-        
+    if (!user) {
+      toast.error("Please login to add product to cart");
+    } else {
+      addProduct(product);
     }
   };
 
   return (
     <div className="p-4">
       <div className="w-full max-w-sm mx-auto bg-white border border-gray-200 rounded-2xl shadow-md overflow-hidden transition-transform duration-300 hover:shadow-lg hover:scale-[1.02]">
-        
         {/* Product Image */}
         <div className="relative h-60 overflow-hidden">
           <img
@@ -28,9 +29,11 @@ const ProductItem = ({ product }) => {
 
         {/* Product Content */}
         <div className="px-5 py-4 flex items-center flex-col justify-between min-h-[180px]">
-          <h3 className="text-xl font-semibold text-gray-800 ">{product.name}</h3>
-          
-          <p className="text-lg font-bold text-indigo-600">${product.price}</p>
+          <h3 className="text-xl font-semibold text-gray-800 ">
+            {product.name}
+          </h3>
+
+          <p className="text-lg font-bold text-indigo-600">₹{product.price}</p>
 
           <button
             onClick={handleAddToCart}

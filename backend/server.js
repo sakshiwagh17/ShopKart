@@ -6,6 +6,7 @@ const authRoute = require("./Routes/authRoute.js");
 const productsRoute=require("./Routes/productsRoute.js")
 const cartRoute=require("./Routes/cartRoute.js")
 const paymentRoute=require("./Routes/paymentRoute.js")
+const couponRoute=require("./Routes/couponRoute.js")
 const connectDB = require("./lib/db.js");
 
 const app = express();
@@ -17,7 +18,7 @@ const cors = require("cors");
 
 app.use(cors({
   origin: "http://localhost:5173", // your frontend
-  credentials: true               // ⬅️ ALLOW COOKIES TO BE SENT
+  credentials: true               
 }));
 
 app.get("/", (req, res) => {
@@ -27,6 +28,7 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoute);
 app.use("/api/products",productsRoute);
 app.use("/api/cart",cartRoute);
+app.use('/api/coupon',couponRoute)
 app.use("/api/payment",paymentRoute);
 app.listen(PORT, () => {
   console.log(`Server is running on the port: ${PORT}`);
