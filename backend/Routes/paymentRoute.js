@@ -1,5 +1,8 @@
-const express=require('express');
+const express = require("express");
+const { createcheckoutsession } = require("../controllers/payment.controller");
 
-const router=express.Router();
+const router = express.Router();
 
-module.exports=router;
+router.get("/create-checkout-session", createcheckoutsession);
+
+module.exports = router;
