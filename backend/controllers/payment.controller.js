@@ -1,62 +1,162 @@
 const { stripe } = require("../lib/stripe");
-
+const { Coupon } = require("../models/coupon.js");
+const { Order } = require("../models/order.js");
 const createcheckoutsession = async (req, res) => {
   try {
     const { products, couponcode } = req.body;
+
+    //Checking products exist for checkout or not
     if (!Array.isArray(products) || products.length === 0) {
       return res.status(400).json({ error: "Invalid or empty product array!" });
     }
-    let lineItems = products.map((products) => {
-      let amount = Math.round(products.price * 100); //sprite want to send in the percents
-      totalAmount += amount * products.quantity;
+
+    //PRODUCT FOR THE STRIPE PAYMENT
+    let totalAmount = 0;
+
+    let lineItems = products.map((product) => {
+      let amount = Math.round(product.price * 100); // Stripe needs smallest currency unit
+      totalAmount += amount * product.quantity; //Increase the amount as per the quantity
 
       return {
         price_data: {
           currency: "INR",
           product_data: {
-            name: products.name,
-            image: [products.image],
+            name: product.name,
+            images: [product.image], // Correct key: images (plural)
           },
           unit_amount: amount,
         },
+        quantity: product.quantity,
       };
     });
 
     let coupon = null;
     if (couponcode) {
-      let coupon = await couponcode.findone({
+      coupon = await Coupon.findOne({
         code: couponcode,
         userId: req.user._id,
         isActive: true,
       });
+
+      //if the coupon exits than remove the discount form the total amount
       if (coupon) {
         totalAmount -= Math.round(
           (totalAmount * coupon.discountpercentage) / 100
         );
       }
     }
-    let session = await stripe.checkout.session.create({
-      payment_method_type: ["card"],
-      line_Items: lineItems,
+
+    //Creating Stripe Checkout Session
+
+    let session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      line_items: lineItems,
       mode: "payment",
-      success_url: `${process.env.CLIENT_URL}/purchase-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.CLIENT_URL}/purchase-cancel`,
+      success_url: `${process.env.CLIENT_URL}/purchase-success?session_id={CHECKOUT_SESSION_ID}`, //redirect if success
+      cancel_url: `${process.env.CLIENT_URL}/purchase-cancel`, //redirect if cancel
       discounts: coupon
         ? [
             {
-              coupon: await createSpriteCoupon(coupon.discountpercentage),
+              //If a coupon exists ,create a sprite coupon
+              coupon: await createStripeCoupon(coupon.discountpercentage),
             },
           ]
         : [],
+      metadata: {
+        userId: req.user._id.toString(),
+        couponcode: couponcode || "",
+        products: JSON.stringify(
+          products.map((p) => ({
+            id: p._id,
+            quantity: p.quantity,
+            price: p.price,
+          }))
+        ),
+      },
     });
-  } catch (error) {}
+
+    //If user spent more than 2000 than automatically generate a coupon
+    if (totalAmount >= 2000 * 100) {
+      // ₹2000 in paise
+      await createNewCoupon(req.user._id);
+    }
+
+    //Here the sessionId will vist the frontend page
+    res.status(200).json({ id: session.id, totalAmount: totalAmount / 100 }); //Return the total bill in ₹, not paisa
+  } catch (error) {
+    console.error("Stripe session error:", error);
+    res.status(500).json({ error: "Failed to create checkout session." });
+  }
 };
 
-async function createSpriteCoupon(discountpercentage) {
-  const coupon = await stripe.coupon.create({
-    precent_off: discountpercentage,
-    duraction: "once",
+//Sprite coupon
+async function createStripeCoupon(discountpercentage) {
+  const coupon = await stripe.coupons.create({
+    percent_off: discountpercentage,
+    duration: "once",
   });
-  return coupon._id;
+  return coupon.id;
 }
-module.exports = { createcheckoutsession };
+
+//new coupon gift for user after a big  purchase
+async function createNewCoupon(userId) {
+  const newCoupon = new Coupon({
+    code: "GIFT" + Math.random().toString(36).substring(2, 8).toUpperCase(), //It will generate a random 6 letter code
+    discountpercentage: 10,
+    expirationDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+    userId: userId,
+    isActive: true,
+  });
+
+  await newCoupon.save();
+  return newCoupon;
+}
+
+const checkoutSuccess = async (req, res) => {
+  try {
+    const { sessionId } = req.body;
+    const session = await stripe.checkout.sessions.retrieve(sessionId); //Gives the details of the session
+    if (session.payment_status === "paid") {
+      //checking if the payment is done or not
+
+      //Here the coupon deactivation is done if the coupon is appied
+      if (session.metadata.couponcode) {
+        await Coupon.findOneAndUpdate(
+          {
+            code: session.metadata.couponcode,
+            userId: session.metadata.userId,
+          },
+          {
+            isActive: false,
+          }
+        );
+      }
+      //create New Order Product
+      const products = JSON.parse(session.metadata.products);
+      const newOrder = await Order.create({
+        user: session.metadata.userId,
+        products: products.map((product) => ({
+          product: product.id,
+          quantity: product.quantity,
+          price: product.price,
+        })),
+        totalAmount: session.amount_total / 100, //convert form cents to rupee
+        stripeSessionId: sessionId,
+      });
+      await newOrder.save();
+      res.status(200).json({
+        success: true,
+        message:
+          "Payment successfull,order created and coupon deactived if use",
+        orderId: newOrder._id,
+      });
+    }
+  } catch (error) {
+    console.error("Error in checkout successfull session:", error);
+    res
+      .status(500)
+      .json({ error: "Failed to create checkout successfull session." });
+  }
+};
+
+module.exports = { createcheckoutsession, checkoutSuccess };
