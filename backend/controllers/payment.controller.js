@@ -1,4 +1,4 @@
-const { stripe } = require("../lib/stripe");
+const { stripe } = require("../lib/stripe.js");
 const { Coupon } = require("../models/coupon.js");
 const { Order } = require("../models/order.js");
 const createcheckoutsession = async (req, res) => {
@@ -26,7 +26,7 @@ const createcheckoutsession = async (req, res) => {
           },
           unit_amount: amount,
         },
-        quantity: product.quantity,
+        quantity: product.quantity||1,
       };
     });
 

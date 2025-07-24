@@ -5,4 +5,4 @@ dotenv.config();
 
 const stripe = new Stripe(process.env.STRIPE_KEY);
 
-module.exports = stripe;
+module.exports = {stripe};

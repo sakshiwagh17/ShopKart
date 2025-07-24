@@ -7,6 +7,7 @@ const productsRoute=require("./Routes/productsRoute.js")
 const cartRoute=require("./Routes/cartRoute.js")
 const paymentRoute=require("./Routes/paymentRoute.js")
 const couponRoute=require("./Routes/couponRoute.js")
+const analyticsRoute=require("./Routes/analyticsRoute.js")
 const connectDB = require("./lib/db.js");
 
 const app = express();
@@ -30,6 +31,7 @@ app.use("/api/products",productsRoute);
 app.use("/api/cart",cartRoute);
 app.use('/api/coupon',couponRoute)
 app.use("/api/payment",paymentRoute);
+app.use("/api/analytics",analyticsRoute)
 app.listen(PORT, () => {
   console.log(`Server is running on the port: ${PORT}`);
   connectDB();

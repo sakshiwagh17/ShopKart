@@ -3,15 +3,32 @@ import { motion } from "framer-motion";
 import { useCartStore } from '../stores/useCartStore'
 import { Link } from "react-router-dom";
 import { MoveRight } from 'lucide-react';
+import {loadStripe} from '@stripe/stripe-js';
+import axios from '../lib/axios';
 
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
 const OrderSummary = () => {
-    const { total, subtotal } = useCartStore();
+    const { total, subtotal ,cart,coupon} = useCartStore();
     const savings = subtotal - total;
 
     const formattedTotal = total.toFixed(2);
     const formattedSubtotal = subtotal.toFixed(2);
     const formattedSavings = savings.toFixed(2);
 
+    const handlePayment=async (req,res) => {
+        const stripe=await stripePromise;
+        const response=await axios.post("/payment/create-checkout-session",{
+            products:cart,
+            coupon:coupon?coupon.code:null
+        });
+        const session=response.data;
+        const result=await stripe.redirectToCheckout({
+            sessionId:session.id
+        })
+        if(result.error){
+            console.log("Error",result.error);
+        }
+    }
     return (
         <motion.div
             className="shadow-xl rounded-2xl p-8 bg-white max-w-2xl mx-auto"
@@ -35,7 +52,7 @@ const OrderSummary = () => {
                 </li>
             </ul>
 
-            <button className='w-full mt-6 bg-indigo-500 hover:bg-indigo-600 text-white py-2 rounded-lg transition'>
+            <button className='w-full mt-6 bg-indigo-500 hover:bg-indigo-600 text-white py-2 rounded-lg transition' onClick={handlePayment}>
                 Proceed to Checkout
             </button>
 

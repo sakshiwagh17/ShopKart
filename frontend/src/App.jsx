@@ -11,6 +11,7 @@ import LoadingSpinner from "./components/LodingSpinner";
 import CategoryPage from "./pages/CategoryPage";
 import CartPage from "./pages/CartPage";
 import { useCartStore } from "./stores/useCartStore";
+import PurchaseSuccess from "./pages/PurchaseSuccess";
 
 const App = () => {
   const { user, checkAuth, checkingAuth } = useUserStore();
@@ -40,6 +41,10 @@ const App = () => {
         <Route
           path="/cart"
           element={user ? <CartPage /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/purchase-success"
+          element={user ? <PurchaseSuccess /> : <Navigate to="/login" />}
         />
         <Route
           path="/secret-dashboard"
