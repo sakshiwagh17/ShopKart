@@ -1,6 +1,6 @@
 const { stripe } = require("../lib/stripe.js");
-const { Coupon } = require("../models/coupon.js");
-const { Order } = require("../models/order.js");
+const  Coupon  = require("../models/coupon.js");
+const  Order  = require("../models/order.js");
 const createcheckoutsession = async (req, res) => {
   try {
     const { products, couponcode } = req.body;
@@ -41,7 +41,7 @@ const createcheckoutsession = async (req, res) => {
       //if the coupon exits than remove the discount form the total amount
       if (coupon) {
         totalAmount -= Math.round(
-          (totalAmount * coupon.discountpercentage) / 100
+          (totalAmount * coupon.discountPercentage) / 100
         );
       }
     }
@@ -58,7 +58,7 @@ const createcheckoutsession = async (req, res) => {
         ? [
             {
               //If a coupon exists ,create a sprite coupon
-              coupon: await createStripeCoupon(coupon.discountpercentage),
+              coupon: await createStripeCoupon(coupon.discountPercentage),
             },
           ]
         : [],
@@ -90,9 +90,9 @@ const createcheckoutsession = async (req, res) => {
 };
 
 //Sprite coupon
-async function createStripeCoupon(discountpercentage) {
+async function createStripeCoupon(discountPercentage) {
   const coupon = await stripe.coupons.create({
-    percent_off: discountpercentage,
+    percent_off: discountPercentage,
     duration: "once",
   });
   return coupon.id;
@@ -100,9 +100,10 @@ async function createStripeCoupon(discountpercentage) {
 
 //new coupon gift for user after a big  purchase
 async function createNewCoupon(userId) {
+  await Coupon.findOneAndDelete({userId})
   const newCoupon = new Coupon({
     code: "GIFT" + Math.random().toString(36).substring(2, 8).toUpperCase(), //It will generate a random 6 letter code
-    discountpercentage: 10,
+    discountPercentage: 10,
     expirationDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
     userId: userId,
     isActive: true,

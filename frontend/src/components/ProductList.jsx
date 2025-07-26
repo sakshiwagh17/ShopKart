@@ -17,7 +17,7 @@ const ProductList = () => {
         <table className="min-w-full table-auto">
           <thead className="bg-indigo-600">
             <tr>
-              {['Products', 'Category', 'Price', 'Featured', 'Actions'].map((heading) => (
+              {['Products', 'Category', 'Price', 'Actions'].map((heading) => (
                 <th
                   key={heading}
                   className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider"
@@ -44,19 +44,6 @@ const ProductList = () => {
                   <td className="px-6 py-4 text-gray-600">{product.category}</td>
                   <td className="px-6 py-4 font-semibold text-gray-700">₹{product.price}</td>
 
-                  <td className="px-6 py-4">
-                    <button
-                      onClick={() => toggleFeaturedProduct(product._id)}
-                      className="hover:text-yellow-500 transition"
-                      title="Toggle Featured"
-                    >
-                      {product.featured ? (
-                        <Star className="text-yellow-400" />
-                      ) : (
-                        <StarOff className="text-gray-400" />
-                      )}
-                    </button>
-                  </td>
 
                   <td className="px-6 py-4">
                     <button

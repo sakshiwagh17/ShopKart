@@ -17,6 +17,8 @@ app.use(cookieParser())
 const PORT = process.env.PORT || 5000;
 const cors = require("cors");
 
+// const __dirname = path.resolve();  //for deployment
+
 app.use(cors({
   origin: "http://localhost:5173", // your frontend
   credentials: true               
@@ -32,6 +34,14 @@ app.use("/api/cart",cartRoute);
 app.use('/api/coupon',couponRoute)
 app.use("/api/payment",paymentRoute);
 app.use("/api/analytics",analyticsRoute)
+
+if (process.env.NODE_ENV === "production") {
+	app.use(express.static(path.join(__dirname, "/frontend/dist")));
+
+	app.get("*", (req, res) => {
+		res.sendFile(path.resolve(__dirname, "frontend", "dist", "index.html"));
+	});
+}
 app.listen(PORT, () => {
   console.log(`Server is running on the port: ${PORT}`);
   connectDB();

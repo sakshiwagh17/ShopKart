@@ -7,13 +7,52 @@ export const useCartStore = create((set, get) => ({
   coupon: null,
   total: 0,
   subtotal: 0,
-  isappliedCoupon:true,
-  // GET
+  isCouponApplied: false, //  fixed typo from isappliedCoupon
+
+  // Get applied coupon for current user
+  getMyCoupon: async () => {
+    try {
+      const response = await axios.get("/coupon");
+      if (response.data) {
+        set({
+          coupon: response.data,
+          isCouponApplied: true,
+        });
+      } else {
+        set({
+          coupon: null,
+          isCouponApplied: false,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching coupon:", error);
+    }
+  },
+
+  // Apply a new coupon
+  applyCoupon: async (code) => {
+    try {
+      const response = await axios.post("/coupon/validate", { code });
+      set({ coupon: response.data, isCouponApplied: true });
+      get().calculateTotal();
+      toast.success("Coupon applied successfully");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to apply coupon");
+    }
+  },
+
+  // Remove currently applied coupon
+  removeCoupon: () => {
+    set({ coupon: null, isCouponApplied: false });
+    get().calculateTotal();
+    toast.success("Coupon removed");
+  },
+
+  // Get cart items
   getCartItem: async () => {
     try {
       const res = await axios.get("/cart");
       set({ cart: res.data });
-      console.log(res.data);
       get().calculateTotal();
     } catch (error) {
       set({ cart: [] });
@@ -21,10 +60,12 @@ export const useCartStore = create((set, get) => ({
     }
   },
 
+  // Clear the cart
   clearCart: async () => {
-		set({ cart: [], coupon: null, total: 0, subtotal: 0 });
-	},
-  // ADD
+    set({ cart: [], coupon: null, total: 0, subtotal: 0 });
+  },
+
+  // Add product to cart
   addProduct: async (product) => {
     try {
       await axios.post("/cart", { productId: product._id });
@@ -51,7 +92,7 @@ export const useCartStore = create((set, get) => ({
     }
   },
 
-  // CALCULATE TOTAL
+  // Calculate subtotal and total
   calculateTotal: () => {
     const { cart, coupon } = get();
     const subtotal = cart.reduce(
@@ -60,7 +101,7 @@ export const useCartStore = create((set, get) => ({
     );
 
     let total = subtotal;
-    if (coupon) {
+    if (coupon && coupon.discountPercentage) {
       const discount = subtotal * (coupon.discountPercentage / 100);
       total = subtotal - discount;
     }
@@ -68,7 +109,7 @@ export const useCartStore = create((set, get) => ({
     set({ subtotal, total });
   },
 
-  // UPDATE QUANTITY
+  // Update product quantity
   updateQuantity: async (productId, quantity) => {
     try {
       if (quantity <= 0) {
@@ -90,7 +131,7 @@ export const useCartStore = create((set, get) => ({
     }
   },
 
-  // REMOVE
+  // Remove product from cart
   removeProductFromCart: async (productId) => {
     try {
       await axios.delete("/cart", { data: { productId } });

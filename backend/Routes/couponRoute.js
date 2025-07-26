@@ -1,5 +1,5 @@
 const express = require("express");
-const { protectRoute } = require("../middleware/auth");
+const { protectRoute } = require("../middleware/auth.js");
 const {
   getCoupon,
   validateCoupon,
@@ -7,6 +7,6 @@ const {
 const router = express.Router();
 
 router.get("/", protectRoute, getCoupon);
-router.get("/validate", validateCoupon);
+router.post("/validate",protectRoute, validateCoupon);
 
 module.exports =  router ;

@@ -62,7 +62,7 @@ const createProducts = async (req, res) => {
 
     res.status(201).json(product);
   } catch (error) {
-    console.error("Error in createProducts:", error.message);
+    console.error("Error in createProducts:", error);
     res.status(500).json({ message: "Server Error", error });
   }
 };

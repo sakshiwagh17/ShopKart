@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
-const User = require("./User");
-const Product = require("./product");
+const User = require("./User.js");
+const Product = require("./product.js");
 
 const orderSchema = new mongoose.Schema(
   {
@@ -43,4 +43,4 @@ const orderSchema = new mongoose.Schema(
 
 const Order = mongoose.model("Order", orderSchema);
 
-module.exports = { Order };
+module.exports = Order ;
