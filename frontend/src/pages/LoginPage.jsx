@@ -1,23 +1,31 @@
+import React, { useState, useEffect } from "react";
 import { Loader, Lock, LogIn, Mail } from "lucide-react";
-import React from "react";
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useUserStore } from "../stores/userStore";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
-  const { login, loading } = useUserStore();
   const [password, setPassword] = useState("");
+  const { login, loading, user } = useUserStore();
+  const navigate = useNavigate();
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log(email, password);
-    login({ email, password });
+    await login({ email, password }); // Make sure we wait
   };
+
+  // Add redirect here when login succeeds
+  useEffect(() => {
+    if (user) {
+      navigate("/"); // Navigate to home after login
+    }
+  }, [user, navigate]);
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
       <h1 className="text-2xl font-bold mb-6 text-indigo-500">Log In</h1>
 
-      <div className="w-80  p-6 rounded-lg shadow-lg">
+      <div className="w-80 p-6 rounded-lg shadow-lg">
         <form onSubmit={handleSubmit} className="space-y-4">
           <ul className="space-y-4">
             <li>
@@ -44,11 +52,11 @@ const LoginPage = () => {
                 </span>
                 <input
                   id="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
                   type="password"
                   placeholder="Enter Password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-10 pr-3 py-2 text-indigo-600 rounded-md focus:outline-none"
                 />
               </div>
@@ -66,19 +74,16 @@ const LoginPage = () => {
               </>
             ) : (
               <>
-                <LogIn size={20} aria-hidden="true" />
+                <LogIn size={20} />
                 <span>LogIn</span>
               </>
             )}
           </button>
         </form>
 
-        <p className="mt-4 text-sm text-center ">
+        <p className="mt-4 text-sm text-center">
           Not Registered yet?{" "}
-          <Link
-            to="/signup"
-            className="underline  text-indigo-600 hover:text-indigo-600"
-          >
+          <Link to="/signup" className="underline text-indigo-600 hover:text-indigo-600">
             Sign Up
           </Link>
         </p>

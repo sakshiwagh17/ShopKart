@@ -1,13 +1,18 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Lock, ShoppingCart, LogIn, LogOut, UserPlus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useUserStore } from "../stores/userStore";
 import { useCartStore } from "../stores/useCartStore";
 
 const Navbar = () => {
-  const { user, logout } = useUserStore();
+  const { user, logout, checkAuth, checkingAuth, loading } = useUserStore();
   const isAdmin = user?.role === "admin";
   const { cart } = useCartStore();
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+
   return (
     <header className="h-16 shadow-md bg-white border-b sticky top-0 z-50 px-4">
       <div className="flex justify-between items-center h-full max-w-7xl mx-auto">
@@ -28,9 +33,8 @@ const Navbar = () => {
 
           {user && (
             <Link
-              to={"/cart"}
-              className="relative group  hover:text-indigo-400 transition duration-300 
-							ease-in-out"
+              to="/cart"
+              className="relative group hover:text-indigo-400 transition"
             >
               <ShoppingCart
                 className="inline-block mr-1 group-hover:text-indigo-400"
@@ -39,8 +43,7 @@ const Navbar = () => {
               <span className="hidden sm:inline">Cart</span>
               {cart.length > 0 && (
                 <span
-                  className="absolute -top-2 -left-2 bg-indigo-500 text-white rounded-full px-2 py-0.5 
-									text-xs group-hover:bg-indigo-400 transition duration-300 ease-in-out"
+                  className="absolute -top-2 -left-2 bg-indigo-500 text-white rounded-full px-2 py-0.5 text-xs"
                 >
                   {cart.length}
                 </span>
@@ -58,7 +61,10 @@ const Navbar = () => {
             </Link>
           )}
 
-          {user ? (
+          {/*Show loading indicator while checking auth */}
+          {checkingAuth || loading ? (
+            <span className="text-gray-500 text-sm">Loading...</span>
+          ) : user ? (
             <button
               onClick={logout}
               className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"

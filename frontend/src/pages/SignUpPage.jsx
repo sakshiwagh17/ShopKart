@@ -1,6 +1,6 @@
-import React, { useState } from "react";
-import { User, Mail, Lock, UserPlus, Loader, ArrowRight } from "lucide-react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { User, Mail, Lock, UserPlus, Loader } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { useUserStore } from "../stores/userStore";
 
 const SignUpPage = () => {
@@ -10,21 +10,32 @@ const SignUpPage = () => {
     password: "",
     confirmPassword: "",
   });
-  const { signup, loading } = useUserStore();
+
+  const navigate = useNavigate();
+  const { signup, loading, user } = useUserStore(); // include user from store
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log(formData);
-    signup(formData);
+    await signup(formData);
+    // redirection will be handled in useEffect
   };
+
+  useEffect(() => {
+    if (user) {
+      navigate("/"); // redirect on signup success
+    }
+  }, [user, navigate]);
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4">
       <h1 className="text-2xl font-bold mb-6 text-indigo-500">
         Create Your Account
       </h1>
 
-      <div className="w-80  p-6 rounded-lg shadow-lg">
+      <div className="w-80 p-6 rounded-lg shadow-lg">
         <form onSubmit={handleSubmit} className="space-y-4">
           <ul className="space-y-4">
+            {/* Name Field */}
             <li>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-indigo-600">
@@ -44,6 +55,7 @@ const SignUpPage = () => {
               </div>
             </li>
 
+            {/* Email Field */}
             <li>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-indigo-600">
@@ -63,6 +75,7 @@ const SignUpPage = () => {
               </div>
             </li>
 
+            {/* Password Field */}
             <li>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-indigo-600">
@@ -81,6 +94,8 @@ const SignUpPage = () => {
                 />
               </div>
             </li>
+
+            {/* Confirm Password Field */}
             <li>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-indigo-600">
@@ -104,6 +119,7 @@ const SignUpPage = () => {
             </li>
           </ul>
 
+          {/* Submit Button */}
           <button
             type="submit"
             className="w-full flex justify-center gap-2 items-center bg-indigo-500 text-white font-semibold px-3 py-2 rounded-md hover:bg-indigo-400 transition"
@@ -122,11 +138,11 @@ const SignUpPage = () => {
           </button>
         </form>
 
-        <p className="mt-4 text-sm text-center ">
+        <p className="mt-4 text-sm text-center">
           Already have an account?{" "}
           <Link
             to="/login"
-            className="underline  text-indigo-600 hover:text-indigo-600"
+            className="underline text-indigo-600 hover:text-indigo-600"
           >
             Log in
           </Link>

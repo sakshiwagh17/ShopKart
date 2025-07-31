@@ -1,32 +1,33 @@
 const { stripe } = require("../lib/stripe.js");
-const  Coupon  = require("../models/coupon.js");
-const  Order  = require("../models/order.js");
+const Coupon = require("../models/coupon.js");
+const Order = require("../models/order.js");
+
 const createcheckoutsession = async (req, res) => {
   try {
     const { products, couponcode } = req.body;
 
-    //Checking products exist for checkout or not
     if (!Array.isArray(products) || products.length === 0) {
       return res.status(400).json({ error: "Invalid or empty product array!" });
     }
 
-    //PRODUCT FOR THE STRIPE PAYMENT
+    let originalTotalAmount = 0;
     let totalAmount = 0;
 
     let lineItems = products.map((product) => {
-      let amount = Math.round(product.price * 100); // Stripe needs smallest currency unit
-      totalAmount += amount * product.quantity; //Increase the amount as per the quantity
+      let amount = Math.round(product.price * 100);
+      originalTotalAmount += amount * product.quantity;
+      totalAmount += amount * product.quantity;
 
       return {
         price_data: {
           currency: "INR",
           product_data: {
             name: product.name,
-            images: [product.image], // Correct key: images (plural)
+            images: [product.image],
           },
           unit_amount: amount,
         },
-        quantity: product.quantity||1,
+        quantity: product.quantity || 1,
       };
     });
 
@@ -38,7 +39,6 @@ const createcheckoutsession = async (req, res) => {
         isActive: true,
       });
 
-      //if the coupon exits than remove the discount form the total amount
       if (coupon) {
         totalAmount -= Math.round(
           (totalAmount * coupon.discountPercentage) / 100
@@ -46,18 +46,15 @@ const createcheckoutsession = async (req, res) => {
       }
     }
 
-    //Creating Stripe Checkout Session
-
-    let session = await stripe.checkout.sessions.create({
+    const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: lineItems,
       mode: "payment",
-      success_url: `${process.env.CLIENT_URL}/purchase-success?session_id={CHECKOUT_SESSION_ID}`, //redirect if success
-      cancel_url: `${process.env.CLIENT_URL}/purchase-cancel`, //redirect if cancel
+      success_url: `${process.env.CLIENT_URL}/purchase-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.CLIENT_URL}/purchase-cancel`,
       discounts: coupon
         ? [
             {
-              //If a coupon exists ,create a sprite coupon
               coupon: await createStripeCoupon(coupon.discountPercentage),
             },
           ]
@@ -75,14 +72,12 @@ const createcheckoutsession = async (req, res) => {
       },
     });
 
-    //If user spent more than 2000 than automatically generate a coupon
-    if (totalAmount >= 2000 * 100) {
-      // ₹2000 in paise
+    // Check original (pre-discount) total
+    if (originalTotalAmount >= 2000 * 100) {
       await createNewCoupon(req.user._id);
     }
 
-    //Here the sessionId will vist the frontend page
-    res.status(200).json({ id: session.id, totalAmount: totalAmount / 100 }); //Return the total bill in ₹, not paisa
+    res.status(200).json({ id: session.id, totalAmount: totalAmount / 100 });
   } catch (error) {
     console.error("Stripe session error:", error);
     res.status(500).json({ error: "Failed to create checkout session." });
@@ -100,16 +95,20 @@ async function createStripeCoupon(discountPercentage) {
 
 //new coupon gift for user after a big  purchase
 async function createNewCoupon(userId) {
-  await Coupon.findOneAndDelete({userId})
-  const newCoupon = new Coupon({
-    code: "GIFT" + Math.random().toString(36).substring(2, 8).toUpperCase(), //It will generate a random 6 letter code
+  const newCouponData = {
+    code: "GIFT" + Math.random().toString(36).substring(2, 8).toUpperCase(),
     discountPercentage: 10,
-    expirationDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-    userId: userId,
+    expirationDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
     isActive: true,
+    userId,
+  };
+
+  const newCoupon = await Coupon.findOneAndUpdate({ userId }, newCouponData, {
+    upsert: true,
+    new: true,
   });
 
-  await newCoupon.save();
+  console.log("New coupon created or updated:", newCoupon.code);
   return newCoupon;
 }
 
